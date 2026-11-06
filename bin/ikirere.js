@@ -1,6 +1,4 @@
 
-
-
 import { parseArgs } from "node:util";
 
 import { geocode } from "../src/geocode.js";
@@ -18,28 +16,13 @@ import {
 
 import { config } from "../src/config.js";
 
-// Cities to check
-const CITIES = [
-  "Kigali",
-  "Nairobi",
-  "Kampala",
-  "Bujumbura",
-  "Dar es Salaam",
-  "Dodoma",
-  "Mombasa",
-  "Addis Ababa",
-  "Lagos",
-  "Johannesburg",
-];
-
 // Application instructions
 const HELP = `
 🌦️ IKIRERE - RWANDA WEATHER CLI
 
 Usage:
-  ikirere <city>                  Check city weather
+  ikirere <city>                  Check weather for any city
   ikirere <city> --save           Check weather and save favourite
-  ikirere --all-cities            Check weather for multiple cities
   ikirere --favourites            Display favourite cities
   ikirere --remove <city>         Remove a favourite city
   ikirere --history               Display recent searches
@@ -47,14 +30,7 @@ Usage:
   ikirere --units imperial        Use Fahrenheit
   ikirere --help                  Display help
 
-Examples:
-  ikirere kigali
-  ikirere "New York"
-  ikirere nairobi --save
-  ikirere --all-cities
-  ikirere --favourites
-  ikirere --history
-  ikirere --remove Kigali
+
 
 Environment variables:
   IKIRERE_UNITS
@@ -85,47 +61,6 @@ Condition:   ${weather.condition}
 `);
 }
 
-// Display weather for multiple cities
-async function showAllCities(units) {
-  console.log("\n🌍 WEATHER REPORT FOR MULTIPLE CITIES\n");
-  console.log("Fetching weather information...\n");
-
-  const results = await Promise.all(
-    CITIES.map(async (city) => {
-      try {
-        const place = await geocode(city);
-
-        if (!place) {
-          return {
-            City: city,
-            Status: "City not found",
-          };
-        }
-
-        const weather = await getForecast(place, units);
-
-        return {
-          City: place.name,
-          Country: place.country,
-          Temperature: `${weather.temperature}${weather.tempUnit}`,
-          Condition: weather.condition,
-          Humidity: `${weather.humidity}%`,
-          Wind: `${weather.windSpeed} ${weather.windUnit}`,
-        };
-      } catch (error) {
-        return {
-          City: city,
-          Status: error.message,
-        };
-      }
-    })
-  );
-
-  console.table(results);
-
-  console.log("\nWeather report completed.\n");
-}
-
 // Display favourite cities
 async function showFavourites() {
   const data = await loadData();
@@ -138,9 +73,7 @@ async function showFavourites() {
   console.log("\n❤️ YOUR FAVOURITE CITIES");
 
   data.favourites.forEach((city, index) => {
-    console.log(
-      `${index + 1}. ${city.name}, ${city.country}`
-    );
+    console.log(`${index + 1}. ${city.name}, ${city.country}`);
   });
 }
 
@@ -190,8 +123,11 @@ function showConfig(units) {
   console.log("------------------------------");
 }
 
-// Check weather for one city
+// Check weather for any city entered by the user
 async function lookup(city, units, shouldSave) {
+  console.log(`\nSearching for ${city}...\n`);
+
+  // Find the city using the geocoding API
   const place = await geocode(city);
 
   if (!place) {
@@ -201,8 +137,10 @@ async function lookup(city, units, shouldSave) {
     );
   }
 
+  // Get weather using the coordinates returned by the API
   const weather = await getForecast(place, units);
 
+  // Display weather information
   displayWeather(place, weather);
 
   // Save search history and favourites
@@ -254,12 +192,6 @@ async function main() {
           type: "boolean",
           short: "f",
         },
-        all: {
-          type: "boolean",
-        },
-        "all-cities": {
-          type: "boolean",
-        },
         remove: {
           type: "string",
           short: "r",
@@ -289,14 +221,13 @@ async function main() {
     fail(`Units must be metric or imperial, got "${values.units}".`);
   }
 
-  const city = positionals.join(" ");
+  // Join city names containing spaces
+  const city = positionals.join(" ").trim();
 
   const isManagement =
     values.favourites ||
     values.history ||
     values.config ||
-    values.all ||
-    values["all-cities"] ||
     values.remove !== undefined;
 
   if (!city && !isManagement) {
@@ -311,12 +242,6 @@ async function main() {
     // Configuration
     if (values.config) {
       showConfig(values.units);
-      return;
-    }
-
-    // Multiple cities
-    if (values.all || values["all-cities"]) {
-      await showAllCities(values.units);
       return;
     }
 
@@ -342,7 +267,7 @@ async function main() {
       return;
     }
 
-    // Single city weather
+    // Check weather for any city
     await lookup(city, values.units, values.save);
 
   } catch (error) {
