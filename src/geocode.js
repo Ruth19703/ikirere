@@ -12,6 +12,7 @@ export async function geocode(city) {
 
   const data = await fetchJson(`${GEOCODING_URL}?${params}`);
 
+  // When nothing matches, the API leaves out "results" entirely
   if (!data.results || data.results.length === 0) {
     return null;
   }

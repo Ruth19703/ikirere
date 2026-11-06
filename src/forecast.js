@@ -39,8 +39,7 @@ export async function getForecast({ latitude, longitude }, units = "metric") {
     timezone: "auto",
   });
 
-    const data = await fetchJson(`${FORECAST_URL}?${params}`);
-    
+  const data = await fetchJson(`${FORECAST_URL}?${params}`);
   const c = data.current;
 
   return {

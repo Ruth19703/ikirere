@@ -1,6 +1,7 @@
 import { IkirereError, EXIT } from "./errors.js";
+import { config } from "./config.js";
 
-export async function fetchJson(url, timeoutMs = 8000) {
+export async function fetchJson(url, timeoutMs = config.timeoutMs) {
   let response;
 
   try {

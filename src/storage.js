@@ -1,10 +1,9 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import path from "node:path";
-import os from "node:os";
 import { IkirereError, EXIT } from "./errors.js";
+import { config } from "./config.js";
 
-export const DATA_DIR = path.join(os.homedir(), ".ikirere");
-export const DATA_FILE = path.join(DATA_DIR, "data.json");
+const DATA_DIR = config.dataDir;
+const DATA_FILE = config.dataFile;
 
 const MAX_HISTORY = 10;
 
