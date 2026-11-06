@@ -1,3 +1,5 @@
+import { fetchJson } from "./http.js";
+
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
 
 // Open-Meteo reports conditions as numeric codes; this turns them into words
@@ -37,13 +39,8 @@ export async function getForecast({ latitude, longitude }, units = "metric") {
     timezone: "auto",
   });
 
-  const response = await fetch(`${FORECAST_URL}?${params}`);
-
-  if (!response.ok) {
-    throw new Error(`Forecast service returned status ${response.status}`);
-  }
-
-  const data = await response.json();
+    const data = await fetchJson(`${FORECAST_URL}?${params}`);
+    
   const c = data.current;
 
   return {

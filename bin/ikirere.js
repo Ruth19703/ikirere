@@ -2,6 +2,7 @@
 import { parseArgs } from "node:util";
 import { geocode } from "../src/geocode.js";
 import { getForecast } from "../src/forecast.js";
+import { IkirereError, EXIT } from "../src/errors.js";
 
 const HELP = `
 ikirere - weather in your terminal
@@ -21,7 +22,7 @@ Examples:
 function fail(message) {
   console.error(`Error: ${message}`);
   console.error("Run 'ikirere --help' for usage.");
-  process.exit(2);
+    process.exit(EXIT.USAGE);
 }
 
 let parsed;
@@ -55,17 +56,29 @@ if (!["metric", "imperial"].includes(values.units)) {
 
 const city = positionals.join(" ");
 
-const place = await geocode(city);
+async function main() {
+  const place = await geocode(city);
 
-if (!place) {
-  console.error(`Could not find a place called "${city}".`);
-  process.exit(1);
+  if (!place) {
+    throw new IkirereError(`Could not find a place called "${city}".`, EXIT.NOT_FOUND);
+  }
+
+  const weather = await getForecast(place, values.units);
+
+  console.log(`\nWeather in ${place.name}, ${place.country}`);
+  console.log(`  ${weather.condition}`);
+  console.log(`  Temperature: ${weather.temperature}${weather.tempUnit} (feels like ${weather.feelsLike}${weather.tempUnit})`);
+  console.log(`  Humidity:    ${weather.humidity}%`);
+  console.log(`  Wind:        ${weather.windSpeed} ${weather.windUnit}`);
 }
 
-const weather = await getForecast(place, values.units);
-
-console.log(`\nWeather in ${place.name}, ${place.country}`);
-console.log(`  ${weather.condition}`);
-console.log(`  Temperature: ${weather.temperature}${weather.tempUnit} (feels like ${weather.feelsLike}${weather.tempUnit})`);
-console.log(`  Humidity:    ${weather.humidity}%`);
-console.log(`  Wind:        ${weather.windSpeed} ${weather.windUnit}`);
+try {
+  await main();
+} catch (err) {
+  if (err instanceof IkirereError) {
+    console.error(`Error: ${err.message}`);
+    process.exit(err.exitCode);
+  }
+  console.error(`Unexpected error: ${err.message}`);
+  process.exit(EXIT.UNEXPECTED);
+}
