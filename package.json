@@ -1,0 +1,16 @@
+{
+  "name": "ikirere",
+  "version": "0.1.0",
+  "description": "A weather tool that runs from the terminal",
+  "type": "module",
+  "bin": {
+    "ikirere": "./bin/ikirere.js"
+  },
+  "scripts": {
+    "start": "node bin/ikirere.js"
+  },
+  "engines": {
+    "node": ">=18.3"
+  },
+  "license": "MIT"
+}
