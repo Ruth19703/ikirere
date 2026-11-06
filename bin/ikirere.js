@@ -16,6 +16,8 @@ import {
 
 import { config } from "../src/config.js";
 
+import { fetchJson } from "../src/http.js";
+
 // Application instructions
 const HELP = `
 🌦️ IKIRERE - RWANDA WEATHER CLI
@@ -165,6 +167,123 @@ async function lookup(city, units, shouldSave) {
   }
 }
 
+
+// Retrieve all countries and their capitals
+async function getAllCapitals(units = "metric") {
+  console.log("\n🌍 IKIRERE — WORLD CAPITALS WEATHER REPORT\n");
+  console.log("Retrieving countries and capitals...\n");
+
+  const countries = await fetchJson(
+    "https://restcountries.com/v3.1/all?fields=name,capital,cca2"
+  );
+
+  const countryCapitals = countries.flatMap((country) => {
+    if (!country.capital || !country.cca2) return [];
+
+    return country.capital.map((capital) => ({
+      capital,
+      country: country.name.common,
+      countryCode: country.cca2,
+    }));
+  });
+
+  console.log(`Found ${countryCapitals.length} listed capitals.`);
+  console.log("Finding capital coordinates...\n");
+
+  const places = [];
+
+  // Retrieve coordinates in batches to avoid too many requests at once
+  for (let i = 0; i < countryCapitals.length; i += 5) {
+    const batch = countryCapitals.slice(i, i + 5);
+
+    const results = await Promise.all(
+      batch.map(async (item) => {
+        try {
+          const place = await geocode(item.capital, item.countryCode);
+
+          if (!place) return null;
+
+          return {
+            ...place,
+            country: item.country,
+          };
+        } catch (error) {
+          console.log(
+            `Could not locate ${item.capital}, ${item.country}: ${error.message}`
+          );
+          return null;
+        }
+      })
+    );
+
+    places.push(...results.filter(Boolean));
+    console.log(`Located ${places.length} of ${countryCapitals.length} capitals...`);
+  }
+
+  // Remove duplicate locations
+  const uniquePlaces = [
+    ...new Map(
+      places.map((place) => [
+        `${place.latitude},${place.longitude}`,
+        place,
+      ])
+    ).values(),
+  ];
+
+  console.log(`\nFetching weather for ${uniquePlaces.length} capitals...\n`);
+
+  const weatherResults = [];
+
+  // Fetch weather in batches
+  for (let i = 0; i < uniquePlaces.length; i += 8) {
+    const batch = uniquePlaces.slice(i, i + 8);
+
+    const results = await Promise.all(
+      batch.map(async (place) => {
+        try {
+          const weather = await getForecast(place, units);
+
+          return {
+            Capital: place.name,
+            Country: place.country,
+            Temperature: `${weather.temperature}${weather.tempUnit}`,
+            Condition: weather.condition,
+            Humidity: `${weather.humidity}%`,
+            Wind: `${weather.windSpeed} ${weather.windUnit}`,
+          };
+        } catch (error) {
+          return {
+            Capital: place.name,
+            Country: place.country,
+            Status: error.message,
+          };
+        }
+      })
+    );
+
+    weatherResults.push(...results);
+
+    console.log(
+      `Weather reports completed: ${weatherResults.length} of ${uniquePlaces.length}`
+    );
+  }
+
+  console.log("\n🌍 WORLD CAPITALS WEATHER RESULTS\n");
+  console.table(weatherResults);
+
+  const successful = weatherResults.filter(
+    (item) => item.Temperature !== undefined
+  ).length;
+
+  console.log(`\nCapitals found: ${countryCapitals.length}`);
+  console.log(`Capitals located: ${uniquePlaces.length}`);
+  console.log(`Successful weather reports: ${successful}`);
+  console.log(
+    `Failed weather reports: ${weatherResults.length - successful}`
+  );
+  console.log("\n✅ World capitals report completed.\n");
+}
+
 // Main application
 async function main() {
   let parsed;
@@ -202,6 +321,9 @@ async function main() {
         config: {
           type: "boolean",
         },
+        random: {
+          type: "string",
+},
       },
     });
   } catch (error) {
