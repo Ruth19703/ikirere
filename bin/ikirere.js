@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
 import { geocode } from "../src/geocode.js";
+import { getForecast } from "../src/forecast.js";
 
 const HELP = `
 ikirere - weather in your terminal
@@ -61,5 +62,10 @@ if (!place) {
   process.exit(1);
 }
 
-console.log(`Found: ${place.name}, ${place.country}`);
-console.log(`Coordinates: ${place.latitude}, ${place.longitude}`);
+const weather = await getForecast(place, values.units);
+
+console.log(`\nWeather in ${place.name}, ${place.country}`);
+console.log(`  ${weather.condition}`);
+console.log(`  Temperature: ${weather.temperature}${weather.tempUnit} (feels like ${weather.feelsLike}${weather.tempUnit})`);
+console.log(`  Humidity:    ${weather.humidity}%`);
+console.log(`  Wind:        ${weather.windSpeed} ${weather.windUnit}`);
